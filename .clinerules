@@ -1,0 +1,136 @@
+# Cline Rules for Excel to SQLite Production Dashboard
+
+## Project Patterns
+
+### File Naming Conventions
+- Excel files follow the pattern: `[data_type] [date] [optional_suffix].XLSX`
+  - Example: `wellprod 06.04.25 mt.XLSX`
+  - Example: `mpvl _01 to 06.04.25.XLSX`
+- SQLite database files follow the pattern: `petro-[data_type]-[date].db`
+  - Example: `petro-wellprod-06042025.db`
+  - Example: `petro-mpvl.db`
+
+### Code Organization
+- Main application logic in `app.py`
+- Data import scripts in separate files (e.g., `insert.py`)
+- Test scripts prefixed with `test_` (e.g., `test_insertion.py`)
+- Excel data files stored in `data/` directory
+- SQLite database files stored in project root
+
+### Data Processing Workflow
+1. Excel files are placed in the `data/` directory
+2. Import scripts convert Excel to SQLite
+3. Dashboard reads from SQLite for visualization
+4. Time series data is simulated based on actual values
+
+## Implementation Patterns
+
+### SQL Query Patterns
+- Group by delivery network for aggregation
+- Order results by volume (descending) for visualization
+- Use column aliases for readability
+- Filter out NULL values for delivery networks
+
+### Visualization Patterns
+- Bar charts for comparing networks
+- Line charts for time series
+- Separate charts for water due to scale differences
+- Highlight maximum values in data tables
+- Use consistent color schemes across visualizations
+
+### Data Simulation Patterns
+- Base values derived from actual production data
+- Random variations (0.8 to 1.2 factor) for realistic simulation
+- Seasonal patterns using sine wave (±15% variation)
+- 12-month historical simulation starting from previous year
+
+## User Preferences
+
+### Dashboard Organization
+- Sidebar for navigation and controls
+- Main area for visualizations and data tables
+- Clear section headers and descriptions
+- Informational notes for simulated data
+
+### Visualization Preferences
+- Interactive filtering by volume type
+- Multi-select for delivery networks
+- Unified hover information for time series
+- Wide layout for better visualization
+- Consistent color schemes
+
+## Critical Implementation Paths
+
+### Data Import Process
+```python
+# Load Excel file with openpyxl engine
+df = pd.read_excel('data/file.xlsx', engine='openpyxl')
+
+# Connect to SQLite database
+conn = sqlite3.connect('database.db')
+
+# Insert data into table (replace if exists)
+df.to_sql('table_name', conn, if_exists='replace', index=False)
+```
+
+### Dashboard Data Loading
+```python
+# Use Streamlit caching for performance
+@st.cache_data
+def load_data():
+    conn = sqlite3.connect('database.db')
+    df = pd.read_sql_query("SELECT * FROM table", conn)
+    conn.close()
+    return df
+```
+
+### Chart Creation Pattern
+```python
+# Create interactive chart with Plotly
+fig = px.bar(
+    dataframe,
+    x='category_column',
+    y='value_column',
+    title='Chart Title',
+    labels={'category_column': 'Display Name', 'value_column': 'Value'},
+    height=600,
+    color='value_column',
+    color_continuous_scale='Viridis'
+)
+
+# Display in Streamlit
+st.plotly_chart(fig, use_container_width=True)
+```
+
+## Known Challenges
+
+### Large Excel Files
+- Excel files can contain thousands of rows
+- Performance issues may occur with very large files
+- Consider chunking for large file processing
+
+### Scale Differences
+- Water volumes are significantly larger than other metrics
+- Requires separate visualization for meaningful comparison
+- Consider log scale or normalization options
+
+### Time Series Limitations
+- Currently using simulated data for time series
+- Need actual historical data for accurate trend analysis
+- Consider implementing proper time series storage
+
+## Evolution of Project Decisions
+
+### Database Structure
+- Initially using direct mapping from Excel to SQLite
+- No normalization applied yet
+- Future consideration: Proper database schema with relationships
+
+### Visualization Approach
+- Started with basic charts for each metric
+- Added time series simulation for trend analysis
+- Future consideration: More advanced visualizations and analytics
+
+### Code Organization
+- Currently using monolithic scripts
+- Future consideration: Proper package structure with separation of concerns
